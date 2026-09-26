@@ -1,6 +1,9 @@
 package com.zaremate.clockin;
 
+import com.mojang.brigadier.CommandContext;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.logging.LogUtils;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
@@ -23,6 +26,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Locale;
+import java.util.concurrent.CompletableFuture;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,6 +98,7 @@ public final class ClockInMod {
         var info = Commands.literal("info")
                 .requires(source -> source.hasPermission(3) || hasPermission(ctxPlayer(source), PERMISSION_INFO))
                 .then(Commands.argument("player", StringArgumentType.word())
+                        .suggests(ClockInMod::suggestPlayers)
                         .executes(ctx -> showPlayerInfo(
                                 ctx.getSource(),
                                 StringArgumentType.getString(ctx, "player"))));
@@ -108,6 +114,36 @@ public final class ClockInMod {
                 .then(info);
 
         event.getDispatcher().register(root);
+    }
+
+    private static CompletableFuture<Suggestions> suggestPlayers(
+            CommandContext<net.minecraft.commands.CommandSourceStack> context,
+            SuggestionsBuilder builder
+    ) {
+        String remaining = builder.getRemaining().toLowerCase(Locale.ROOT);
+
+        Map<String, String> names = new LinkedHashMap<>();
+
+        var server = context.getSource().getServer();
+        if (server != null) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                String name = player.getGameProfile().getName();
+                names.putIfAbsent(name.toLowerCase(Locale.ROOT), name);
+            }
+        }
+
+        for (PlayerData player : PLAYERS.values()) {
+            if (player != null && player.name != null && !player.name.isBlank()) {
+                names.putIfAbsent(player.name.toLowerCase(Locale.ROOT), player.name);
+            }
+        }
+
+        names.values().stream()
+                .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(remaining))
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .forEach(builder::suggest);
+
+        return builder.buildFuture();
     }
 
     private ServerPlayer ctxPlayer(net.minecraft.commands.CommandSourceStack source) {
