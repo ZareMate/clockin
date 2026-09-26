@@ -146,6 +146,13 @@ public final class ClockInMod {
         return builder.buildFuture();
     }
 
+    private static Component prefix() {
+        return Component.literal("ClockIn ")
+                .withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD)
+                .append(Component.literal("» ")
+                        .withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+    }
+
     private ServerPlayer ctxPlayer(net.minecraft.commands.CommandSourceStack source) {
         try {
             return source.getPlayerOrException();
@@ -178,21 +185,32 @@ public final class ClockInMod {
 
         PlayerData data = getOrCreate(player);
         if (data.autoClockedOut) {
-            player.sendSystemMessage(Component.literal("You were clocked out because you left the server."));
+            player.sendSystemMessage(prefix()
+                    .append(Component.literal("Your previous session was automatically closed because you left the server.")
+                            .withStyle(net.minecraft.ChatFormatting.YELLOW)));
             data.autoClockedOut = false;
             saveData();
         }
 
         if (hasPermission(player, PERMISSION_LOGIN)) {
             player.sendSystemMessage(Component.empty());
-            player.sendSystemMessage(Component.literal("ADMINISTRATION TIME TRACKING").withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD));
-            player.sendSystemMessage(Component.literal("You can track your administration help time.").withStyle(net.minecraft.ChatFormatting.GRAY));
+            player.sendSystemMessage(Component.literal("✦ ADMIN TIME TRACKING")
+                    .withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD));
+            player.sendSystemMessage(Component.literal("Track the time you spend providing administration assistance.")
+                    .withStyle(net.minecraft.ChatFormatting.GRAY));
             player.sendSystemMessage(
                     Component.literal("[ CLOCK IN ]")
                             .withStyle(style -> style.withColor(net.minecraft.ChatFormatting.GREEN).withBold(true)
                                     .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/clockin in"))
-                                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Clock in")))));
-            player.sendSystemMessage(Component.literal("Use /clockin to view your tracked time.").withStyle(net.minecraft.ChatFormatting.GRAY));
+                                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                            Component.literal("Start your administration time session.")))));
+            player.sendSystemMessage(
+                    Component.literal("Use ")
+                            .withStyle(net.minecraft.ChatFormatting.DARK_GRAY)
+                            .append(Component.literal("/clockin")
+                                    .withStyle(net.minecraft.ChatFormatting.AQUA))
+                            .append(Component.literal(" to view your current status.")
+                                    .withStyle(net.minecraft.ChatFormatting.GRAY)));
             player.sendSystemMessage(Component.empty());
         }
     }
@@ -218,7 +236,9 @@ public final class ClockInMod {
     private int clockIn(ServerPlayer player) {
         PlayerData data = getOrCreate(player);
         if (data.clockedIn) {
-            player.sendSystemMessage(Component.literal("You are already clocked in.").withStyle(net.minecraft.ChatFormatting.YELLOW));
+            player.sendSystemMessage(prefix()
+                    .append(Component.literal("You are already clocked in.")
+                            .withStyle(net.minecraft.ChatFormatting.YELLOW)));
             return 0;
         }
 
@@ -227,15 +247,20 @@ public final class ClockInMod {
         data.autoClockedOut = false;
         saveData();
 
-        player.sendSystemMessage(Component.literal("You are now clocked in.").withStyle(net.minecraft.ChatFormatting.GREEN));
-        player.sendSystemMessage(Component.literal("Administration time tracking has started.").withStyle(net.minecraft.ChatFormatting.GRAY));
+        player.sendSystemMessage(prefix()
+                .append(Component.literal("Clocked in successfully.")
+                        .withStyle(net.minecraft.ChatFormatting.GREEN, net.minecraft.ChatFormatting.BOLD)));
+        player.sendSystemMessage(Component.literal("Administration time tracking has started.")
+                .withStyle(net.minecraft.ChatFormatting.GRAY));
         return 1;
     }
 
     private int clockOut(ServerPlayer player, boolean automatic) {
         PlayerData data = getOrCreate(player);
         if (!data.clockedIn) {
-            player.sendSystemMessage(Component.literal("You are not currently clocked in.").withStyle(net.minecraft.ChatFormatting.YELLOW));
+            player.sendSystemMessage(prefix()
+                    .append(Component.literal("You are not currently clocked in.")
+                            .withStyle(net.minecraft.ChatFormatting.YELLOW)));
             return 0;
         }
 
@@ -247,13 +272,23 @@ public final class ClockInMod {
         saveData();
 
         if (automatic) {
-            player.sendSystemMessage(Component.literal("You were clocked out because you left the server.").withStyle(net.minecraft.ChatFormatting.YELLOW));
+            player.sendSystemMessage(prefix()
+                    .append(Component.literal("Session closed automatically.")
+                            .withStyle(net.minecraft.ChatFormatting.YELLOW, net.minecraft.ChatFormatting.BOLD)));
         } else {
-            player.sendSystemMessage(Component.literal("You are now clocked out.").withStyle(net.minecraft.ChatFormatting.GREEN));
-            player.sendSystemMessage(Component.literal("Session time: ").withStyle(net.minecraft.ChatFormatting.GRAY)
-                    .append(Component.literal(formatDuration(sessionSeconds)).withStyle(net.minecraft.ChatFormatting.AQUA)));
-            player.sendSystemMessage(Component.literal("Total administration time: ").withStyle(net.minecraft.ChatFormatting.GRAY)
-                    .append(Component.literal(formatDuration(data.totalSeconds)).withStyle(net.minecraft.ChatFormatting.AQUA)));
+            player.sendSystemMessage(prefix()
+                    .append(Component.literal("Clocked out successfully.")
+                            .withStyle(net.minecraft.ChatFormatting.GREEN, net.minecraft.ChatFormatting.BOLD)));
+            player.sendSystemMessage(
+                    Component.literal("  Session: ")
+                            .withStyle(net.minecraft.ChatFormatting.GRAY)
+                            .append(Component.literal(formatDuration(sessionSeconds))
+                                    .withStyle(net.minecraft.ChatFormatting.AQUA, net.minecraft.ChatFormatting.BOLD)));
+            player.sendSystemMessage(
+                    Component.literal("  Total: ")
+                            .withStyle(net.minecraft.ChatFormatting.GRAY)
+                            .append(Component.literal(formatDuration(data.totalSeconds))
+                                    .withStyle(net.minecraft.ChatFormatting.AQUA, net.minecraft.ChatFormatting.BOLD)));
         }
 
         return 1;
@@ -263,28 +298,51 @@ public final class ClockInMod {
         PlayerData data = getOrCreate(player);
         long total = totalSeconds(data);
 
-        player.sendSystemMessage(Component.literal("────────────────────────────────────").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
-        player.sendSystemMessage(Component.literal("ADMIN CLOCK-IN").withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD));
+        player.sendSystemMessage(Component.literal("══════════════════════════════════════")
+                .withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+        player.sendSystemMessage(Component.literal("✦ ADMIN CLOCK-IN")
+                .withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD));
+        player.sendSystemMessage(
+                Component.literal("  Status: ")
+                        .withStyle(net.minecraft.ChatFormatting.GRAY)
+                        .append(Component.literal(data.clockedIn ? "CLOCKED IN" : "CLOCKED OUT")
+                                .withStyle(data.clockedIn
+                                        ? net.minecraft.ChatFormatting.GREEN
+                                        : net.minecraft.ChatFormatting.RED,
+                                        net.minecraft.ChatFormatting.BOLD)));
 
         if (data.clockedIn) {
-            player.sendSystemMessage(Component.literal("Status: ").withStyle(net.minecraft.ChatFormatting.GRAY)
-                    .append(Component.literal("CLOCKED IN").withStyle(net.minecraft.ChatFormatting.GREEN, net.minecraft.ChatFormatting.BOLD)));
-            player.sendSystemMessage(Component.literal("Current session: ").withStyle(net.minecraft.ChatFormatting.GRAY)
-                    .append(Component.literal(formatDuration(currentSessionSeconds(data))).withStyle(net.minecraft.ChatFormatting.AQUA)));
-            player.sendSystemMessage(Component.literal("Total time: ").withStyle(net.minecraft.ChatFormatting.GRAY)
-                    .append(Component.literal(formatDuration(total)).withStyle(net.minecraft.ChatFormatting.AQUA)));
-            player.sendSystemMessage(Component.literal("[ CLOCK OUT ]").withStyle(style -> style.withColor(net.minecraft.ChatFormatting.RED).withBold(true)
-                    .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/clockin out"))));
-        } else {
-            player.sendSystemMessage(Component.literal("Status: ").withStyle(net.minecraft.ChatFormatting.GRAY)
-                    .append(Component.literal("CLOCKED OUT").withStyle(net.minecraft.ChatFormatting.RED, net.minecraft.ChatFormatting.BOLD)));
-            player.sendSystemMessage(Component.literal("Total time: ").withStyle(net.minecraft.ChatFormatting.GRAY)
-                    .append(Component.literal(formatDuration(total)).withStyle(net.minecraft.ChatFormatting.AQUA)));
-            player.sendSystemMessage(Component.literal("[ CLOCK IN ]").withStyle(style -> style.withColor(net.minecraft.ChatFormatting.GREEN).withBold(true)
-                    .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/clockin in"))));
+            player.sendSystemMessage(
+                    Component.literal("  Session: ")
+                            .withStyle(net.minecraft.ChatFormatting.GRAY)
+                            .append(Component.literal(formatDuration(currentSessionSeconds(data)))
+                                    .withStyle(net.minecraft.ChatFormatting.AQUA)));
         }
 
-        player.sendSystemMessage(Component.literal("────────────────────────────────────").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+        player.sendSystemMessage(
+                Component.literal("  Total:   ")
+                        .withStyle(net.minecraft.ChatFormatting.GRAY)
+                        .append(Component.literal(formatDuration(total))
+                                .withStyle(net.minecraft.ChatFormatting.AQUA)));
+
+        player.sendSystemMessage(Component.empty());
+
+        if (data.clockedIn) {
+            player.sendSystemMessage(Component.literal("[ CLOCK OUT ]")
+                    .withStyle(style -> style.withColor(net.minecraft.ChatFormatting.RED).withBold(true)
+                            .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/clockin out"))
+                            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                    Component.literal("End your current administration time session.")))));
+        } else {
+            player.sendSystemMessage(Component.literal("[ CLOCK IN ]")
+                    .withStyle(style -> style.withColor(net.minecraft.ChatFormatting.GREEN).withBold(true)
+                            .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/clockin in"))
+                            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                    Component.literal("Start an administration time session.")))));
+        }
+
+        player.sendSystemMessage(Component.literal("══════════════════════════════════════")
+                .withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
         return 1;
     }
 
@@ -293,38 +351,74 @@ public final class ClockInMod {
         entries.sort(Comparator.comparingLong((PlayerData p) -> totalSeconds(p)).reversed()
                 .thenComparing(p -> p.name, String.CASE_INSENSITIVE_ORDER));
 
-        source.sendSuccess(() -> Component.literal("────────────────────────────────────").withStyle(net.minecraft.ChatFormatting.DARK_GRAY), false);
-        source.sendSuccess(() -> Component.literal("ADMIN CLOCK-IN LEADERBOARD").withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD), false);
+        source.sendSuccess(() -> Component.literal("══════════════════════════════════════")
+                .withStyle(net.minecraft.ChatFormatting.DARK_GRAY), false);
+        source.sendSuccess(() -> Component.literal("✦ ADMIN CLOCK-IN LEADERBOARD")
+                .withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD), false);
 
         int limit = Math.min(10, entries.size());
         for (int i = 0; i < limit; i++) {
             final int rank = i + 1;
             PlayerData p = entries.get(i);
-            source.sendSuccess(() -> Component.literal("#" + rank + " " + p.name + " — " + formatDuration(totalSeconds(p)))
-                    .withStyle(net.minecraft.ChatFormatting.WHITE), false);
+            source.sendSuccess(() -> Component.literal(String.format("%2d. ", rank))
+                            .withStyle(net.minecraft.ChatFormatting.DARK_GRAY)
+                            .append(Component.literal(p.name)
+                                    .withStyle(net.minecraft.ChatFormatting.WHITE, net.minecraft.ChatFormatting.BOLD))
+                            .append(Component.literal("  " + formatDuration(totalSeconds(p)))
+                                    .withStyle(net.minecraft.ChatFormatting.AQUA)),
+                    false);
         }
 
         if (entries.isEmpty()) {
-            source.sendSuccess(() -> Component.literal("No administration time has been recorded yet.").withStyle(net.minecraft.ChatFormatting.GRAY), false);
+            source.sendSuccess(() -> Component.literal("No administration time has been recorded yet.")
+                    .withStyle(net.minecraft.ChatFormatting.GRAY), false);
         }
 
-        source.sendSuccess(() -> Component.literal("────────────────────────────────────").withStyle(net.minecraft.ChatFormatting.DARK_GRAY), false);
+        source.sendSuccess(() -> Component.literal("══════════════════════════════════════")
+                .withStyle(net.minecraft.ChatFormatting.DARK_GRAY), false);
         return 1;
     }
 
     private int showPlayerInfo(net.minecraft.commands.CommandSourceStack source, String targetName) {
         PlayerData data = findByName(targetName);
         if (data == null) {
-            source.sendFailure(Component.literal("No clock-in data found for " + targetName + "."));
+            source.sendFailure(prefix()
+                    .append(Component.literal("No clock-in data found for ")
+                            .withStyle(net.minecraft.ChatFormatting.GRAY))
+                    .append(Component.literal(targetName)
+                            .withStyle(net.minecraft.ChatFormatting.WHITE))
+                    .append(Component.literal(".")
+                            .withStyle(net.minecraft.ChatFormatting.GRAY)));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("Player: " + data.name), false);
-        source.sendSuccess(() -> Component.literal("Status: " + (data.clockedIn ? "CLOCKED IN" : "CLOCKED OUT")), false);
-        source.sendSuccess(() -> Component.literal("Total time: " + formatDuration(totalSeconds(data))), false);
+        source.sendSuccess(() -> Component.literal("══════════════════════════════════════")
+                .withStyle(net.minecraft.ChatFormatting.DARK_GRAY), false);
+        source.sendSuccess(() -> Component.literal("✦ CLOCK-IN INFO")
+                .withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD), false);
+        source.sendSuccess(() -> Component.literal("  Player:  ")
+                        .withStyle(net.minecraft.ChatFormatting.GRAY)
+                        .append(Component.literal(data.name)
+                                .withStyle(net.minecraft.ChatFormatting.WHITE, net.minecraft.ChatFormatting.BOLD)), false);
+        source.sendSuccess(() -> Component.literal("  Status:  ")
+                        .withStyle(net.minecraft.ChatFormatting.GRAY)
+                        .append(Component.literal(data.clockedIn ? "CLOCKED IN" : "CLOCKED OUT")
+                                .withStyle(data.clockedIn
+                                        ? net.minecraft.ChatFormatting.GREEN
+                                        : net.minecraft.ChatFormatting.RED,
+                                        net.minecraft.ChatFormatting.BOLD)), false);
+        source.sendSuccess(() -> Component.literal("  Total:   ")
+                        .withStyle(net.minecraft.ChatFormatting.GRAY)
+                        .append(Component.literal(formatDuration(totalSeconds(data)))
+                                .withStyle(net.minecraft.ChatFormatting.AQUA)), false);
         if (data.clockedIn) {
-            source.sendSuccess(() -> Component.literal("Current session: " + formatDuration(currentSessionSeconds(data))), false);
+            source.sendSuccess(() -> Component.literal("  Session: ")
+                    .withStyle(net.minecraft.ChatFormatting.GRAY)
+                    .append(Component.literal(formatDuration(currentSessionSeconds(data)))
+                            .withStyle(net.minecraft.ChatFormatting.AQUA)), false);
         }
+        source.sendSuccess(() -> Component.literal("══════════════════════════════════════")
+                .withStyle(net.minecraft.ChatFormatting.DARK_GRAY), false);
         return 1;
     }
 
