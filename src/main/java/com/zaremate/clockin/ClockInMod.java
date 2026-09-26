@@ -1,6 +1,6 @@
 package com.zaremate.clockin;
 
-import com.mojang.brigadier.CommandContext;
+import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
