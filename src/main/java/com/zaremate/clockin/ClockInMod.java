@@ -44,6 +44,7 @@ public final class ClockInMod {
 
     private static final Map<UUID, PlayerData> PLAYERS = new LinkedHashMap<>();
     private static Path dataFile;
+    private static boolean dataLoaded;
 
     private static LuckPerms luckPerms;
 
@@ -61,9 +62,18 @@ public final class ClockInMod {
 
     @SubscribeEvent
     public void onServerStarting(net.neoforged.neoforge.event.server.ServerStartedEvent event) {
-        dataFile = event.getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
+        dataFile = event.getServer()
+                .getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
                 .resolve(DATA_FILE);
         loadData();
+        dataLoaded = true;
+    }
+
+    @SubscribeEvent
+    public void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
+        dataLoaded = false;
+        dataFile = null;
+        PLAYERS.clear();
     }
 
     @SubscribeEvent
@@ -77,17 +87,20 @@ public final class ClockInMod {
                 .executes(ctx -> clockOut(ctx.getSource().getPlayerOrException(), false));
 
         var leaderboard = Commands.literal("leaderboard")
-                .requires(source -> hasPermission(ctxPlayer(source), PERMISSION_LEADERBOARD))
+                .requires(source -> source.hasPermission(3) || hasPermission(ctxPlayer(source), PERMISSION_LEADERBOARD))
                 .executes(ctx -> showLeaderboard(ctx.getSource()));
 
         var info = Commands.literal("info")
-                .requires(source -> hasPermission(ctxPlayer(source), PERMISSION_INFO))
+                .requires(source -> source.hasPermission(3) || hasPermission(ctxPlayer(source), PERMISSION_INFO))
                 .then(Commands.argument("player", StringArgumentType.word())
                         .executes(ctx -> showPlayerInfo(
                                 ctx.getSource(),
                                 StringArgumentType.getString(ctx, "player"))));
 
         var root = Commands.literal("clockin")
+                .requires(source -> source.isPlayer()
+                        && (source.hasPermission(3)
+                        || hasPermission(ctxPlayer(source), PERMISSION_STATUS)))
                 .executes(ctx -> showStatus(ctx.getSource().getPlayerOrException()))
                 .then(clockIn)
                 .then(clockOut)
@@ -322,6 +335,7 @@ public final class ClockInMod {
 
     private void loadData() {
         if (dataFile == null) return;
+        dataLoaded = false;
         try {
             if (!Files.exists(dataFile)) {
                 saveData();
@@ -340,8 +354,10 @@ public final class ClockInMod {
                 PLAYERS.putAll(file.players);
             }
             LOGGER.info("Loaded {} ClockIn player record(s).", PLAYERS.size());
+            dataLoaded = true;
         } catch (Throwable ex) {
             LOGGER.error("Failed to load ClockIn data.", ex);
+            dataLoaded = true;
         }
     }
 
