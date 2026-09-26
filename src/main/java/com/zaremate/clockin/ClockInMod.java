@@ -299,7 +299,7 @@ public final class ClockInMod {
         PlayerData data = getOrCreate(player);
         long total = totalSeconds(data);
 
-        player.sendSystemMessage(Component.literal("══════════════════════════════════════")
+        player.sendSystemMessage(Component.literal("═══════════════════════════════════")
                 .withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
         player.sendSystemMessage(Component.literal("✦ ADMIN CLOCK-IN")
                 .withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD));
@@ -342,7 +342,7 @@ public final class ClockInMod {
                                     Component.literal("Start an administration time session.")))));
         }
 
-        player.sendSystemMessage(Component.literal("══════════════════════════════════════")
+        player.sendSystemMessage(Component.literal("═══════════════════════════════════")
                 .withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
         return 1;
     }
@@ -352,7 +352,7 @@ public final class ClockInMod {
         entries.sort(Comparator.comparingLong((PlayerData p) -> totalSeconds(p)).reversed()
                 .thenComparing(p -> p.name, String.CASE_INSENSITIVE_ORDER));
 
-        source.sendSuccess(() -> Component.literal("══════════════════════════════════════")
+        source.sendSuccess(() -> Component.literal("═══════════════════════════════════")
                 .withStyle(net.minecraft.ChatFormatting.DARK_GRAY), false);
         source.sendSuccess(() -> Component.literal("✦ ADMIN CLOCK-IN LEADERBOARD")
                 .withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD), false);
@@ -375,7 +375,7 @@ public final class ClockInMod {
                     .withStyle(net.minecraft.ChatFormatting.GRAY), false);
         }
 
-        source.sendSuccess(() -> Component.literal("══════════════════════════════════════")
+        source.sendSuccess(() -> Component.literal("═══════════════════════════════════")
                 .withStyle(net.minecraft.ChatFormatting.DARK_GRAY), false);
         return 1;
     }
@@ -393,7 +393,7 @@ public final class ClockInMod {
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("══════════════════════════════════════")
+        source.sendSuccess(() -> Component.literal("═══════════════════════════════════")
                 .withStyle(net.minecraft.ChatFormatting.DARK_GRAY), false);
         source.sendSuccess(() -> Component.literal("✦ CLOCK-IN INFO")
                 .withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD), false);
@@ -418,7 +418,7 @@ public final class ClockInMod {
                     .append(Component.literal(formatDuration(currentSessionSeconds(data)))
                             .withStyle(net.minecraft.ChatFormatting.AQUA)), false);
         }
-        source.sendSuccess(() -> Component.literal("══════════════════════════════════════")
+        source.sendSuccess(() -> Component.literal("═══════════════════════════════════")
                 .withStyle(net.minecraft.ChatFormatting.DARK_GRAY), false);
         return 1;
     }
