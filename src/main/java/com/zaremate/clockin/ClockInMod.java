@@ -16,6 +16,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -72,7 +74,36 @@ public final class ClockInMod {
                 .getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
                 .resolve(DATA_FILE);
         loadData();
+        recoverInterruptedSessions();
         dataLoaded = true;
+    }
+
+    @SubscribeEvent
+    public void onServerTick(ServerTickEvent.Post event) {
+        // Persist active sessions periodically so a crash does not leave them
+        // running indefinitely after the server comes back online.
+        if (event.getServer().getTickCount() % 100 != 0 || !dataLoaded || dataFile == null) {
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        boolean changed = false;
+
+        for (PlayerData data : PLAYERS.values()) {
+            if (data.clockedIn) {
+                data.lastActiveAt = now;
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            saveData();
+        }
+    }
+
+    @SubscribeEvent
+    public void onServerStopping(ServerStoppingEvent event) {
+        closeAllActiveSessions("server stopping");
     }
 
     @SubscribeEvent
@@ -187,7 +218,7 @@ public final class ClockInMod {
         PlayerData data = getOrCreate(player);
         if (data.autoClockedOut) {
             player.sendSystemMessage(prefix()
-                    .append(Component.literal("Your previous session was automatically closed because you left the server.")
+                    .append(Component.literal("Your previous session was automatically closed.")
                             .withStyle(net.minecraft.ChatFormatting.YELLOW)));
             data.autoClockedOut = false;
             saveData();
@@ -227,11 +258,76 @@ public final class ClockInMod {
         data.totalSeconds += sessionSeconds;
         data.clockedIn = false;
         data.clockInAt = 0L;
+        data.lastActiveAt = 0L;
         data.autoClockedOut = true;
         data.name = player.getGameProfile().getName();
         saveData();
 
         LOGGER.info("Automatically clocked out {} after {}.", player.getGameProfile().getName(), formatDuration(sessionSeconds));
+    }
+
+    private void recoverInterruptedSessions() {
+        boolean changed = false;
+
+        for (PlayerData data : PLAYERS.values()) {
+            if (!data.clockedIn) {
+                continue;
+            }
+
+            long endAt = data.lastActiveAt > 0 ? data.lastActiveAt : data.clockInAt;
+            long sessionSeconds = Math.max(0, (endAt - data.clockInAt) / 1000L);
+
+            data.totalSeconds += sessionSeconds;
+            data.clockedIn = false;
+            data.clockInAt = 0L;
+            data.lastActiveAt = 0L;
+            data.autoClockedOut = true;
+            changed = true;
+
+            LOGGER.warn(
+                    "Recovered interrupted ClockIn session for {} after an unclean server shutdown ({}).",
+                    data.name,
+                    formatDuration(sessionSeconds)
+            );
+        }
+
+        if (changed) {
+            saveData();
+        }
+    }
+
+    private void closeAllActiveSessions(String reason) {
+        if (dataFile == null) {
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        boolean changed = false;
+
+        for (PlayerData data : PLAYERS.values()) {
+            if (!data.clockedIn) {
+                continue;
+            }
+
+            long sessionSeconds = Math.max(0, (now - data.clockInAt) / 1000L);
+            data.totalSeconds += sessionSeconds;
+            data.clockedIn = false;
+            data.clockInAt = 0L;
+            data.lastActiveAt = 0L;
+            data.autoClockedOut = true;
+            changed = true;
+
+            LOGGER.info(
+                    "Automatically closed ClockIn session for {} after {} ({}).",
+                    data.name,
+                    formatDuration(sessionSeconds),
+                    reason
+            );
+        }
+
+        if (changed) {
+            saveData();
+        }
     }
 
     private int clockIn(ServerPlayer player) {
@@ -245,6 +341,7 @@ public final class ClockInMod {
 
         data.clockedIn = true;
         data.clockInAt = System.currentTimeMillis();
+        data.lastActiveAt = data.clockInAt;
         data.autoClockedOut = false;
         saveData();
 
@@ -269,6 +366,7 @@ public final class ClockInMod {
         data.totalSeconds += sessionSeconds;
         data.clockedIn = false;
         data.clockInAt = 0L;
+        data.lastActiveAt = 0L;
         data.autoClockedOut = automatic;
         saveData();
 
@@ -524,6 +622,7 @@ public final class ClockInMod {
         public long totalSeconds;
         public boolean clockedIn;
         public long clockInAt;
+        public long lastActiveAt;
         public boolean autoClockedOut;
 
         public PlayerData() {}
