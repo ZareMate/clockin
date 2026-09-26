@@ -79,11 +79,11 @@ public final class ClockInMod {
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
         var clockIn = Commands.literal("in")
-                .requires(source -> source.isPlayer() && hasPermission(source.getPlayerOrException(), PERMISSION_IN))
+                .requires(source -> source.isPlayer() && hasPermission(ctxPlayer(source), PERMISSION_IN))
                 .executes(ctx -> clockIn(ctx.getSource().getPlayerOrException()));
 
         var clockOut = Commands.literal("out")
-                .requires(source -> source.isPlayer() && hasPermission(source.getPlayerOrException(), PERMISSION_OUT))
+                .requires(source -> source.isPlayer() && hasPermission(ctxPlayer(source), PERMISSION_OUT))
                 .executes(ctx -> clockOut(ctx.getSource().getPlayerOrException(), false));
 
         var leaderboard = Commands.literal("leaderboard")
@@ -262,8 +262,9 @@ public final class ClockInMod {
 
         int limit = Math.min(10, entries.size());
         for (int i = 0; i < limit; i++) {
+            final int rank = i + 1;
             PlayerData p = entries.get(i);
-            source.sendSuccess(() -> Component.literal("#" + (i + 1) + " " + p.name + " — " + formatDuration(totalSeconds(p)))
+            source.sendSuccess(() -> Component.literal("#" + rank + " " + p.name + " — " + formatDuration(totalSeconds(p)))
                     .withStyle(net.minecraft.ChatFormatting.WHITE), false);
         }
 
