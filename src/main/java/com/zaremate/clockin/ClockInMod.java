@@ -218,7 +218,7 @@ public final class ClockInMod {
         PlayerData data = getOrCreate(player);
         if (data.autoClockedOut) {
             player.sendSystemMessage(prefix()
-                    .append(Component.literal("Your previous session was automatically closed because you left the server.")
+                    .append(Component.literal("Your previous session was automatically closed.")
                             .withStyle(net.minecraft.ChatFormatting.YELLOW)));
             data.autoClockedOut = false;
             saveData();
