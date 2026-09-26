@@ -252,7 +252,7 @@ public final class ClockInMod {
         return 1;
     }
 
-    private void showLeaderboard(net.minecraft.commands.CommandSourceStack source) {
+    private int showLeaderboard(net.minecraft.commands.CommandSourceStack source) {
         List<PlayerData> entries = new ArrayList<>(PLAYERS.values());
         entries.sort(Comparator.comparingLong((PlayerData p) -> totalSeconds(p)).reversed()
                 .thenComparing(p -> p.name, String.CASE_INSENSITIVE_ORDER));
@@ -272,6 +272,7 @@ public final class ClockInMod {
         }
 
         source.sendSuccess(() -> Component.literal("────────────────────────────────────").withStyle(net.minecraft.ChatFormatting.DARK_GRAY), false);
+        return 1;
     }
 
     private int showPlayerInfo(net.minecraft.commands.CommandSourceStack source, String targetName) {
